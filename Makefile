@@ -95,6 +95,7 @@ docker/pull:
 	docker pull $(DOCKER_IMAGE):latest || true
 
 docker/build:
+	docker images
 	docker build --cache-from=$(DOCKER_IMAGE) --tag=$(DOCKER_IMAGE) .
 
 docker/push:

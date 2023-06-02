@@ -53,9 +53,26 @@ jobs:
         parallel: true
         flag-name: run-${{ matrix.os }}-${{ matrix.python-version }}
 
+  prebuild_docker_image:
+    name: Prebuild docker image for ubuntu jobs (layers are cached on GitHub Cache)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout python-for-android
+      uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and export
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: kivy/python-for-android:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
   ubuntu_build_apk:
     name: Unit test apk [ ${{ matrix.runs_on }} | ${{ matrix.bootstrap.name }} ]
-    needs: [flake8]
+    needs: prebuild_docker_image
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
@@ -71,18 +88,16 @@ jobs:
     steps:
     - name: Checkout python-for-android
       uses: actions/checkout@v3
-    # helps with GitHub runner getting out of space
-    - name: Free disk space
-      run: |
-        df -h
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt -y clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - name: Pull docker image
-      run: |
-        make docker/pull
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and export
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: kivy/python-for-android:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     - name: Build multi-arch apk Python 3 (armeabi-v7a, arm64-v8a, x86_64, x86)
       run: |
         mkdir -p apks
@@ -98,7 +113,7 @@ jobs:
 
   macos_build_apk:
     name: Unit test apk [ ${{ matrix.runs_on }} | ${{ matrix.bootstrap.name }} ]
-    needs: [flake8]
+    needs: [test]
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
@@ -148,7 +163,7 @@ jobs:
 
   ubuntu_build_aab:
     name: Unit test aab [ ${{ matrix.runs_on }} ]
-    needs: [flake8]
+    needs: [prebuild_docker_image]
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
@@ -162,18 +177,16 @@ jobs:
     steps:
     - name: Checkout python-for-android
       uses: actions/checkout@v3
-    # helps with GitHub runner getting out of space
-    - name: Free disk space
-      run: |
-        df -h
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt -y clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - name: Pull docker image
-      run: |
-        make docker/pull
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and export
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: kivy/python-for-android:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     - name: Build Android App Bundle Python 3 (armeabi-v7a, arm64-v8a, x86_64, x86)
       run: |
         mkdir -p aabs
@@ -190,7 +203,7 @@ jobs:
 
   ubuntu_build_aar:
     name: Unit test aar [ ${{ matrix.runs_on }} ]
-    needs: [flake8]
+    needs: [prebuild_docker_image]
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
@@ -202,18 +215,16 @@ jobs:
     steps:
     - name: Checkout python-for-android
       uses: actions/checkout@v3
-    # helps with GitHub runner getting out of space
-    - name: Free disk space
-      run: |
-        df -h
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt -y clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - name: Pull docker image
-      run: |
-        make docker/pull
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and export
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: kivy/python-for-android:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     - name: Build Android AAR Python 3 (arm64-v8a)
       run: |
         mkdir -p aars
@@ -230,7 +241,7 @@ jobs:
 
   macos_build_aab:
     name: Unit test aab [ ${{ matrix.runs_on }} | ${{ matrix.bootstrap.name }} ]
-    needs: [flake8]
+    needs: [test]
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
@@ -280,7 +291,7 @@ jobs:
 
   ubuntu_rebuild_updated_recipes:
     name: Test updated recipes for arch ${{ matrix.android_arch }} [ ubuntu-latest ]
-    needs: [flake8]
+    needs: [prebuild_docker_image]
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
@@ -293,25 +304,23 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    # helps with GitHub runner getting out of space
-    - name: Free disk space
-      run: |
-        df -h
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt -y clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - name: Pull docker image
-      run: |
-        make docker/pull
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and export
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: kivy/python-for-android:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     - name: Rebuild updated recipes
       run: |
         make docker/run/make/rebuild_updated_recipes
 
   macos_rebuild_updated_recipes:
     name: Test updated recipes for arch ${{ matrix.android_arch }} [ ${{ matrix.runs_on }} ]
-    needs: [flake8]
+    needs: [test]
     runs-on: ${{ matrix.runs_on }}
     continue-on-error: true
     strategy:
